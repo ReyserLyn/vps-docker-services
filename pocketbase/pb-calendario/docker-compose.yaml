@@ -1,0 +1,46 @@
+services:
+  pb-calendario:
+    image: ghcr.io/kdpuvvadi/pocketbase:latest
+    container_name: pb-calendario
+    volumes:
+      - ./pb_data:/usr/src/app/pb_data
+      - ./pb_public:/usr/src/app/pb_public
+      - ./pb_hooks:/usr/src/app/pb_hooks
+    env_file:
+      - .env
+    environment:
+      - PB_ENCRYPTION_KEY=${PB_ENCRYPTION_KEY}
+    command: --encryptionEnv=PB_ENCRYPTION_KEY
+    labels:
+      # Habilitar Traefik para este contenedor
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      # Router seguro (HTTPS) con nombre único: pb-calendario-secure
+      - traefik.http.routers.pb-calendario.rule=Host(`pb-calendario.reyserlyn.com`)
+      - traefik.http.routers.pb-calendario.entrypoints=websecure
+      - traefik.http.routers.pb-calendario.tls=true
+      - traefik.http.routers.pb-calendario.tls.certresolver=cloudflare
+      # Servicio: indicamos el puerto interno donde escucha PocketBase
+      - traefik.http.services.pb-calendario.loadbalancer.server.port=8090
+      - Traefik.http.routers.pb-calendario.service=pb-calendario
+      # Middleware para gestionar CORS
+      - traefik.http.middlewares.pb-calendario-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS
+      - traefik.http.middlewares.pb-calendario-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.pb-calendario-cors.headers.accesscontrolalloworiginlist=https://calendario.reyserlyn.com
+      - traefik.http.middlewares.pb-calendario-cors.headers.accesscontrolmaxage=3000
+      - traefik.http.middlewares.pb-calendario-cors.headers.addvaryheader=true
+      # Vincula el middleware de CORS al router
+      - traefik.http.routers.pb-calendario.middlewares=pb-calendario-cors
+    networks:
+      - traefik
+    restart: unless-stopped
+    healthcheck:
+      test: curl --fail http://localhost:8090/api/health || exit 1
+      interval: 30s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+
+networks:
+  traefik:
+    external: true
