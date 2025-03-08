@@ -1,0 +1,77 @@
+services:
+  museum:
+    container_name: museum
+    image: ghcr.io/ente-io/server:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres-museum:
+        condition: service_healthy
+    environment:
+      - ENTE_CREDENTIALS_FILE=/credentials.yaml
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.ente-secure.rule=Host(`ente.reyserlyn.com`)
+      - traefik.http.routers.ente-secure.entrypoints=websecure
+      - traefik.http.routers.ente-secure.tls=true
+      - traefik.http.routers.ente-secure.tls.certresolver=cloudflare
+      - traefik.http.services.ente.loadbalancer.server.port=8080
+      - traefik.http.middlewares.ente-https-redirect.redirectscheme.scheme=https
+      - traefik.http.routers.ente.middlewares=ente-https-redirect
+      - traefik.http.routers.ente-secure.service=ente
+      - traefik.http.middlewares.ente-secure-cors.headers.accesscontrolallowmethods=GET,HEAD,POST,PUT,DELETE
+      - traefik.http.middlewares.ente-secure-cors.headers.accesscontrolallowheaders=*
+      - traefik.http.middlewares.ente-secure-cors.headers.accesscontrolalloworiginlist=https://ente.reyserlyn.com,https://photos.reyserlyn.com,https://photos.maridey.me
+      - traefik.http.middlewares.ente-secure-cors.headers.accesscontrolmaxage=3000
+      - traefik.http.middlewares.ente-secure-cors.headers.accessControlExposeHeaders=ETag
+      - traefik.http.middlewares.ente-secure-cors.headers.addvaryheader=true
+      - traefik.http.routers.ente-secure.middlewares=ente-secure-cors
+    volumes:
+      - ./custom-logs/:/var/logs
+      - ./config/museum.yaml:/museum.yaml:ro
+      - ./config/credentials.yaml:/credentials.yaml:ro
+      - ./data/:/data:ro
+    networks:
+      - traefik
+      - ente
+
+  postgres-museum:
+    container_name: postgres-museum
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRESQL_USER:-pguser}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:?POSTGRESSQL_PASSWORD is required}
+      - POSTGRES_DB=${POSTGRESQL_DB:-ente_db}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-q",
+          "-d",
+          "ente_db",
+          "-U",
+          "${POSTGRESQL_USER:-pguser}",
+        ]
+      start_period: 40s
+      start_interval: 1s
+    volumes:
+      - pg-data-museum:/var/lib/postgresql/data
+    networks:
+      - ente
+volumes:
+  pg-data-museum:
+    name: pg-data-museum
+    external: true
+
+networks:
+  ente:
+    driver: bridge
+    name: ente
+  traefik:
+    external: true

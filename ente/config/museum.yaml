@@ -1,0 +1,31 @@
+apps:
+  public-albums: https://albums.photos.reyserlyn.com
+
+# SMTP configuration (optional)
+#
+# Configure credentials here for sending mails from museum (e.g. OTP emails).
+#
+# The smtp credentials will be used if the host is specified. Otherwise it will
+# try to use the transmail credentials. Ideally, one of smtp or transmail should
+# be configured for a production instance.
+#
+# smtp:
+#  host:
+#  port:
+#  username:
+#  password:
+#  email: noreply@ente.reyserlyn.com
+
+s3:
+  are_local_buckets: false
+  b2-eu-cen:
+    key: key
+    secret: secret
+    endpoint: https://id.r2.cloudflarestorage.com
+    region: auto
+    bucket: ente-reyser
+# Add this once you have done the CLI part
+#internal:
+#  admins:
+#    - 1580559962386438
+#    - 1580559962386440
