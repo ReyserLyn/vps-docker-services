@@ -1,0 +1,66 @@
+services:
+  postgres-zipline:
+    container_name: postgres-zipline
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRESQL_USER:-zipline}
+      - POSTGRES_PASSWORD=${POSTGRESQL_PASSWORD:?POSTGRESSQL_PASSWORD is required}
+      - POSTGRES_DB=${POSTGRESQL_DB:-zipline}
+    volumes:
+      - pg-data-zipline:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "zipline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zipline
+
+  zipline:
+    container_name: zipline
+    image: ghcr.io/diced/zipline:trunk-arm64
+    restart: unless-stopped
+    env_file:
+      - .env
+    healthcheck:
+      disable: true
+    depends_on:
+      - postgres-zipline
+    environment:
+      - CORE_SECRET=${CORE_SECRET}
+      - DATABASE_URL=postgres://${POSTGRESQL_USER:-zipline}:${POSTGRESQL_PASSWORD}@postgres-zipline:5432/${POSTGRESQL_DB:-zipline}
+      - DATASOURCE_TYPE=s3
+      - DATASOURCE_S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - DATASOURCE_S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - DATASOURCE_S3_BUCKET=${S3_BUCKET}
+      - DATASOURCE_S3_ENDPOINT=${S3_ENDPOINT}
+      - DATASOURCE_S3_REGION=auto
+      - DATASOURCE_S3_FORCE_PATH=true
+      - DATASOURCE_S3_USE_SSL=true
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.zipline.rule=Host(`drive.reyserlyn.com`) || Host(`drive.maridey.me`)
+      - traefik.http.routers.zipline.entrypoints=websecure
+      - traefik.http.routers.zipline.tls=true
+      - traefik.http.routers.zipline.tls.certresolver=cloudflare
+      - traefik.http.services.zipline.loadbalancer.server.port=3000
+    volumes:
+      - ./public/:/zipline/public/
+      - ./themes:/zipline/themes
+    networks:
+      - traefik
+      - zipline
+
+volumes:
+  pg-data-zipline:
+    name: pg-data-zipline
+
+networks:
+  traefik:
+    external: true
+  zipline:
+    driver: bridge
+    name: zipline
