@@ -1,5 +1,0 @@
-# Ignorar todos los archivos .env
-**/.env
-
-# Incluir todos los archivos .env.example
-!.env.example
