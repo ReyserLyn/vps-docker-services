@@ -1,0 +1,22 @@
+services:
+  draw:
+    container_name: draw
+    image: jauderho/excalidraw:latest
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    environment:
+      - REACT_APP_BACKEND_V1_GET_URL=https://draw.reyserlyn.com/api/v1/
+      - REACT_APP_BACKEND_V2_GET_URL=https://draw.reyserlyn.com/api/v2/
+      - REACT_APP_BACKEND_V2_POST_URL=https://draw.reyserlyn.com/api/v2/post
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.draw.rule=Host(`draw.reyserlyn.com`) || Host(`draw.maridey.me`)
+      - traefik.http.routers.draw.entrypoints=websecure
+      - traefik.http.routers.draw.tls=true
+      - traefik.http.routers.draw.tls.certresolver=cloudflare
+    network_mode: traefik
+
+networks:
+  traefik:
+    external: true
