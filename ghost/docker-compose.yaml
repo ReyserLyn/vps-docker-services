@@ -1,0 +1,62 @@
+services:
+  ghost:
+    container_name: ghost
+    image: ghost:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - database__client=${DB_CLIENT}
+      - database__connection__host=${DB_HOST}
+      - database__connection__user=${DB_USER}
+      - database__connection__password=${DB_PASSWORD}
+      - database__connection__database=${DB_DATABASE}
+      - url=https://ghost.reyserlyn.com
+    volumes:
+      - ghost:/var/lib/ghost/content
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.ghost.rule=Host(`ghost.reyserlyn.com`)
+      - traefik.http.routers.ghost.entrypoints=websecure
+      - traefik.http.routers.ghost.tls=true
+      - traefik.http.routers.ghost.tls.certresolver=cloudflare
+      - traefik.http.services.ghost.loadbalancer.server.port=2368
+      - traefik.http.routers.ghost.service=ghost
+    depends_on:
+      mysql-ghost:
+        condition: service_healthy
+    networks:
+      - traefik
+      - ghost
+
+  mysql-ghost:
+    container_name: mysql-ghost
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql-ghost:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - ghost
+
+volumes:
+  ghost:
+    name: ghost
+  mysql-ghost:
+    name: mysql-ghost
+
+networks:
+  traefik:
+    external: true
+  ghost:
+    driver: bridge
+    name: ghost
