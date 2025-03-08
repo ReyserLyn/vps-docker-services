@@ -1,0 +1,24 @@
+services:
+  memos:
+    container_name: memos
+    image: neosmemo/memos:stable
+    restart: unless-stopped
+    volumes:
+      - memos-db:/var/opt/memos
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.memos.rule=Host(`memos.reyserlyn.com`) || Host(`memos.maridey.me`)
+      - traefik.http.routers.memos.entrypoints=websecure
+      - traefik.http.routers.memos.tls=true
+      - traefik.http.routers.memos.tls.certresolver=cloudflare
+    networks:
+      - traefik
+
+volumes:
+  memos-db:
+    name: memos-db
+    external: true
+
+networks:
+  traefik:
+    external: true
