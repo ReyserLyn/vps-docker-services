@@ -1,0 +1,32 @@
+secrets:
+  CF_DNS_API_TOKEN:
+    file: ./secrets/CF_DNS_API_TOKEN
+services:
+  reverse-proxy:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+      # - "8080:8080"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml:ro
+      - ./config/certs/:/etc/traefik/certs/:rw
+      - ./logs/:/var/log/traefik/
+      - ./config/config.yaml:/etc/traefik/config.yaml:ro
+    environment:
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/CF_DNS_API_TOKEN
+      - CF_API_EMAIL=${CF_API_EMAIL}
+    networks:
+      - traefik
+    secrets:
+      - CF_DNS_API_TOKEN
+
+networks:
+  traefik:
+    external: true
